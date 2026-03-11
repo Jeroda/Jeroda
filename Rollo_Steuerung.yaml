@@ -1,0 +1,80 @@
+blueprint:
+  name: Rollo Steuerung mit Türsensor & Zeitlogik
+  description: >
+    Schließt das Rollo bei Sonnenuntergang, wenn die Tür geschlossen ist.
+    Öffnet das Rollo auf 5 %, wenn die Tür geöffnet wird.
+    Verhindert vollständiges Öffnen vor einer definierten Uhrzeit.
+  domain: automation
+  input:
+    rollo:
+      name: Rollo
+      description: Das zu steuernde Rollo
+      selector:
+        entity:
+          domain: cover
+
+    tuer_sensor:
+      name: Türsensor
+      description: Binary Sensor der Balkontür (on = offen, off = zu)
+      selector:
+        entity:
+          domain: binary_sensor
+
+    min_open_time:
+      name: Früheste vollständige Öffnungszeit
+      description: Vor dieser Uhrzeit wird das Rollo nicht komplett geöffnet
+      default: "09:00:00"
+      selector:
+        time: {}
+
+    open_position:
+      name: Öffnungsposition bei Türöffnung
+      description: Position in Prozent, wenn die Tür geöffnet wird
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+
+mode: single
+
+trigger:
+  - id: sunset
+    platform: sun
+    event: sunset
+
+  - id: tuer_auf
+    platform: state
+    entity_id: !input tuer_sensor
+    from: "off"
+    to: "on"
+
+condition: []
+
+action:
+  - choose:
+      # --- Sonnenuntergang ---
+      - conditions:
+          - condition: trigger
+            id: sunset
+          - condition: state
+            entity_id: !input tuer_sensor
+            state: "off"
+        sequence:
+          - service: cover.close_cover
+            target:
+              entity_id: !input rollo
+
+      # --- Tür wird geöffnet ---
+      - conditions:
+          - condition: trigger
+            id: tuer_auf
+        sequence:
+          - condition: time
+            after: !input min_open_time
+          - service: cover.set_cover_position
+            target:
+              entity_id: !input rollo
+            data:
+              position: !input open_position
