@@ -1,35 +1,38 @@
 blueprint:
   name: Rollo Steuerung mit Türsensor & Zeitlogik
   description: >
-    Schließt das Rollo bei Sonnenuntergang, wenn die Tür geschlossen ist.
+    Schließt das Rollo bei Sonnenuntergang (konfigurierbare Entität), wenn die Tür geschlossen ist.
     Öffnet das Rollo auf 5 %, wenn die Tür geöffnet wird.
     Verhindert vollständiges Öffnen vor einer definierten Uhrzeit.
   domain: automation
+
   input:
     rollo:
       name: Rollo
-      description: Das zu steuernde Rollo
       selector:
         entity:
           domain: cover
 
     tuer_sensor:
       name: Türsensor
-      description: Binary Sensor der Balkontür (on = offen, off = zu)
       selector:
         entity:
           domain: binary_sensor
 
+    sunset_entity:
+      name: Sonnenuntergang Entität
+      description: Entität, die den Sonnenuntergang signalisiert (z. B. sun.sun oder ein Helper)
+      selector:
+        entity: {}
+
     min_open_time:
       name: Früheste vollständige Öffnungszeit
-      description: Vor dieser Uhrzeit wird das Rollo nicht komplett geöffnet
       default: "09:00:00"
       selector:
         time: {}
 
     open_position:
       name: Öffnungsposition bei Türöffnung
-      description: Position in Prozent, wenn die Tür geöffnet wird
       default: 5
       selector:
         number:
@@ -41,8 +44,8 @@ mode: single
 
 trigger:
   - id: sunset
-    platform: sun
-    event: sunset
+    platform: state
+    entity_id: !input sunset_entity
 
   - id: tuer_auf
     platform: state
