@@ -1,7 +1,7 @@
 blueprint:
-  name: Rollo Steuerung mit Türsensor & Zeitlogik
+  name: Rollo Steuerung mit Türsensor, Sonnenuntergang & Offset
   description: >
-    Schließt das Rollo bei Sonnenuntergang (konfigurierbare Entität), wenn die Tür geschlossen ist.
+    Schließt das Rollo vor Sonnenuntergang (mit Offset), wenn die Tür geschlossen ist.
     Öffnet das Rollo auf 5 %, wenn die Tür geöffnet wird.
     Verhindert vollständiges Öffnen vor einer definierten Uhrzeit.
   domain: automation
@@ -25,6 +25,17 @@ blueprint:
       selector:
         entity: {}
 
+    sunset_offset:
+      name: Minuten vor Sonnenuntergang
+      description: Negativer Wert = vor Sonnenuntergang, 0 = exakt, positiv = nach Sonnenuntergang
+      default: -20
+      selector:
+        number:
+          min: -120
+          max: 120
+          step: 1
+          unit_of_measurement: "min"
+
     min_open_time:
       name: Früheste vollständige Öffnungszeit
       default: "09:00:00"
@@ -44,8 +55,9 @@ mode: single
 
 trigger:
   - id: sunset
-    platform: state
-    entity_id: !input sunset_entity
+    platform: template
+    value_template: >
+      {{ now() >= (states[inputs.sunset_entity].attributes.next_setting | as_datetime - timedelta(minutes=inputs.sunset_offset | int)) }}
 
   - id: tuer_auf
     platform: state
@@ -57,7 +69,7 @@ condition: []
 
 action:
   - choose:
-      # --- Sonnenuntergang ---
+      # --- Sonnenuntergang mit Offset ---
       - conditions:
           - condition: trigger
             id: sunset
